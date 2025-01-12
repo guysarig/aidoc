@@ -11,6 +11,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
 
       - name: Run test stage
         run: echo "Running test stage"
@@ -60,9 +62,9 @@ jobs:
         run: |
           set -e
           if git rev-parse HEAD~1 >/dev/null 2>&1; then
-            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.py$')
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.py$' || true)
           else
-            CHANGED_FILES=$(git diff --name-only HEAD | grep '\.py$')
+            CHANGED_FILES=$(git diff --name-only HEAD | grep '\.py$' || true)
           fi
           echo "Changed files: $CHANGED_FILES"
           # if [ -n "$CHANGED_FILES" ]; then
