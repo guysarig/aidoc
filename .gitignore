@@ -1,0 +1,8 @@
+.t*
+*.pyc
+*.pyo
+*.pyd
+awstest/source/build/*
+.DS_Store
+resources*.json
+*.zip

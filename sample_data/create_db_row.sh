@@ -1,0 +1,1 @@
+aws dynamodb put-item --table-name aidoc-Devops1-ex-ProductAvailability --item '{"productId": {"S": "P001"}, "productName": {"S": "Wireless Mouse"}, "quantity": {"N": "2"}, "price": {"N": "25.99"}}'
