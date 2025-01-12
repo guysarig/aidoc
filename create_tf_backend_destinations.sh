@@ -7,4 +7,4 @@ cd source
 sh ../helper_scripts/build_lambda.sh functions order_verification requirements.txt $LAMBDA_PAYLOADS_DIR $BUCKET_NAME
 sh ../helper_scripts/build_lambda.sh functions order_retrieval requirements.txt $LAMBDA_PAYLOADS_DIR $BUCKET_NAME
 cd ..
-cd iac && terraform init && terraform apply && cd ..
+# cd iac && terraform init && terraform apply && cd ..
