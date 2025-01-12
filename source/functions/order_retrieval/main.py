@@ -7,7 +7,7 @@ QUEUE_URL = os.environ.get("SQS_QUEUE_URL")
 VALID_API_KEY = os.environ.get("API_KEY")
 
 def lambda_handler(event, context):
-    # Validate API Key
+    # Validate API Key 
     headers = event.get("headers", {})
     api_key = headers.get("x-api-key")
 
