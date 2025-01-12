@@ -1,0 +1,5 @@
+SOURCE_DIR=$1
+FUNCTION_NAME=$2
+REQUIREMENTS_FILE=${3:-requirements.txt}
+pip3 install -r $SOURCE_DIR/$FUNCTION_NAME/$REQUIREMENTS_FILE
+pytest source/tests/
