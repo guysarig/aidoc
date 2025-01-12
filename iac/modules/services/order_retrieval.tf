@@ -118,7 +118,6 @@ resource "aws_api_gateway_stage" "order_api_stage" {
 
 resource "aws_api_gateway_deployment" "order_api_deployment" {
   rest_api_id = aws_api_gateway_rest_api.order_api.id
-  stage_name  = "${var.resource_prefix}-prod"
 
   lifecycle {
     create_before_destroy = true

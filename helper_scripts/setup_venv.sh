@@ -6,6 +6,3 @@ fi
 
 # Activate the virtual environment
 source venv/bin/activate
-
-echo "Current directory: $(pwd) 's contents:"
-ls -l */ -d

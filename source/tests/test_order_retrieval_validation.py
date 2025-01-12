@@ -2,7 +2,7 @@
 # import pytest
 # import boto3
 # from botocore.stub import Stubber
-# from functions.order_retrieval import retrieve_order
+# from lambdafunctions.order_retrieval.main import lambda_handler
 
 # def test_retrieve_order_success():
 #     sqs = boto3.client('sqs')
