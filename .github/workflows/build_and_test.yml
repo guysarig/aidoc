@@ -1,0 +1,25 @@
+name: Build and Test
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+
+      # Add your build and test steps here
+      - name: Run test stage
+        run: echo "Running test stage"
+      - name: Plan infrastructure
+        run: |
+          cd iac
+          terraform init
+          terraform plan -out=tfplan
+          cd ..
