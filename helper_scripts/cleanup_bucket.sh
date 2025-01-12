@@ -1,3 +1,2 @@
-LAMBDA_PAYLOADS_DIR=lambda_payloads
-BUCKET_NAME=aidoc-devops-test
+BUCKET_NAME=aidoc-devops-cloud-ex-bucket3
 aws s3 rm s3://$BUCKET_NAME --recursive
