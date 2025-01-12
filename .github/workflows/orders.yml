@@ -59,16 +59,20 @@ jobs:
       - name: Check for Python changes
         run: |
           set -e
-          CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.py$')
-          echo "Changed files: $CHANGED_FILES"
-          if [ -n "$CHANGED_FILES" ]; then
-            echo "Python code has changed, packaging Lambda payload."
-            source helper_scripts/setup_venv.sh
-            sh create_tf_backend_destinations.sh
-            echo "Lambda payloads built successfully."
+          if git rev-parse HEAD~1 >/dev/null 2>&1; then
+            CHANGED_FILES=$(git diff --name-only HEAD~1 HEAD | grep '\.py$')
           else
-            echo "No changes in Python code, skipping packaging."
+            CHANGED_FILES=$(git diff --name-only HEAD | grep '\.py$')
           fi
+          echo "Changed files: $CHANGED_FILES"
+          # if [ -n "$CHANGED_FILES" ]; then
+          #   echo "Python code has changed, packaging Lambda payload."
+          #   source helper_scripts/setup_venv.sh
+          #   sh create_tf_backend_destinations.sh
+          #   echo "Lambda payloads built successfully."
+          # else
+          #   echo "No changes in Python code, skipping packaging."
+          # fi
 
       - name: Plan infrastructure
         run: |
