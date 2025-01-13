@@ -12,6 +12,6 @@ output "order_api_key" {
 }
 
 output "api_gateway_url" {
-  value = "https://${aws_api_gateway_rest_api.order_api.id}.execute-api.${var.region}.amazonaws.com/prod/${aws_api_gateway_resource.process_resource.path_part}"
+  value = "https://${aws_api_gateway_rest_api.order_api.id}.execute-api.${var.region}.amazonaws.com/${aws_api_gateway_stage.order_api_stage.stage_name}/${aws_api_gateway_resource.process_resource.path_part}"
   description = "The full URL of the API Gateway endpoint for the process resource"
 }
