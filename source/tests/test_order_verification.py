@@ -1,129 +1,89 @@
 import os
-import json
 import pytest
+import json
+from moto import mock_aws
 import boto3
-from time import sleep
-import botocore
 
-LOCALSTACK_URL = "http://localhost:4566"
-REGION_NAME    = "eu-central-1"
+# Set environment variables before importing the module
+os.environ['DYNAMODB_TABLE'] = 'test-table'
+os.environ['SQS_QUEUE_URL'] = 'https://sqs.eu-central-1.amazonaws.com/123456789012/test-queue'
 
-os.environ["DYNAMODB_TABLE"] = "test-table"
-os.environ["SQS_QUEUE_URL"]  = "http://localhost:4566/000000000000/test-queue"  # or your ARNs
+from lambdafunctions.order_verification.main import lambda_handler
 
-# Suppose your application code imports these env vars
-# from lambdafunctions.order_verification.main import lambda_handler
+@pytest.fixture
+def aws_credentials():
+    """Mocked AWS Credentials for moto."""
+    os.environ['AWS_ACCESS_KEY_ID'] = 'testing'
+    os.environ['AWS_SECRET_ACCESS_KEY'] = 'testing'
+    os.environ['AWS_SECURITY_TOKEN'] = 'testing'
+    os.environ['AWS_SESSION_TOKEN'] = 'testing'
 
-def create_s3_bucket_if_not_exists(s3_client, bucket_name):
-    """Create an S3 bucket only if it does not already exist."""
-    try:
-        # Check if the bucket exists
-        s3_client.head_bucket(Bucket=bucket_name)
-        print(f"Bucket '{bucket_name}' already exists.")
-    except botocore.exceptions.ClientError as e:
-        # If the bucket does not exist (404), create it
-        if e.response['Error']['Code'] == '404':
-            print(f"Bucket '{bucket_name}' does not exist. Creating it.")
-            s3_client.create_bucket(
-                Bucket=bucket_name,
-                CreateBucketConfiguration={"LocationConstraint": REGION_NAME}
-            )
-        else:
-            # Raise other errors
-            raise
+@pytest.fixture
+def s3(aws_credentials):
+    with mock_aws():
+        yield boto3.client('s3', region_name='eu-central-1')
 
+@pytest.fixture
+def dynamodb(aws_credentials):
+    with mock_aws():
+        yield boto3.resource('dynamodb', region_name='eu-central-1')
 
-@pytest.fixture(scope="session", autouse=True)
-def setup_localstack_resources():
-    """
-    One-time setup to create the local resources (S3 bucket, DynamoDB table, SQS queue) in LocalStack.
-    """
-    s3_client = boto3.client("s3", endpoint_url=LOCALSTACK_URL, region_name=REGION_NAME)
+@pytest.fixture
+def sqs(aws_credentials):
+    with mock_aws():
+        yield boto3.client('sqs', region_name='eu-central-1')
 
-    # Create S3 bucket and add policy
-    create_s3_bucket_if_not_exists(s3_client, "my-test-bucket1")
-    bucket_policy = {
-        "Version": "2012-10-17",
-        "Statement": [
-            {
-                "Effect": "Allow",
-                "Principal": {"AWS": "*"},
-                "Action": "s3:GetObject",
-                "Resource": f"arn:aws:s3:::my-test-bucket1/*"
-            }
+def test_lambda_handler(s3, dynamodb, sqs):
+    # Set up mock S3
+    bucket_name = 'aidoc-devops-cloud-ex-bucket3'
+    object_key = 'orders/order123456.json'
+    s3.create_bucket(
+        Bucket=bucket_name,
+        CreateBucketConfiguration={'LocationConstraint': 'eu-central-1'}
+    )
+    order_data = {
+        "items": [
+            {"productId": "12345"},
+            {"productId": "456"}
         ]
     }
-    s3_client.put_bucket_policy(Bucket="my-test-bucket1", Policy=json.dumps(bucket_policy))
+    s3.put_object(Bucket=bucket_name, Key=object_key, Body=json.dumps(order_data))
 
-    # Debugging
-    print("Bucket policy applied:", s3_client.get_bucket_policy(Bucket="my-test-bucket1")["Policy"])
-
-    # Create DynamoDB table
-    ddb_client = boto3.client("dynamodb", endpoint_url=LOCALSTACK_URL, region_name=REGION_NAME)
-    try:
-        ddb_client.create_table(
-            TableName="test-table",
-            KeySchema=[{"AttributeName": "productId", "KeyType": "HASH"}],
-            AttributeDefinitions=[{"AttributeName": "productId", "AttributeType": "S"}],
-            ProvisionedThroughput={"ReadCapacityUnits": 5, "WriteCapacityUnits": 5},
-        )
-    except ddb_client.exceptions.ResourceInUseException:
-        print("DynamoDB table 'test-table' already exists.")
-
-    # Create SQS queue
-    sqs_client = boto3.client("sqs", endpoint_url=LOCALSTACK_URL, region_name=REGION_NAME)
-    try:
-        sqs_client.create_queue(QueueName="test-queue")
-    except sqs_client.exceptions.QueueNameExists:
-        print("SQS queue 'test-queue' already exists.")
-
-    yield
-
-
-def test_integration_localstack():
-    """
-    Example integration test calling your lambda_handler
-    that expects an S3 event, checks DynamoDB, and sends a message to SQS.
-    """
-    # Setup test data
-    s3_client = boto3.client("s3", endpoint_url=LOCALSTACK_URL, region_name=REGION_NAME)
-    ddb_client = boto3.client("dynamodb", endpoint_url=LOCALSTACK_URL, region_name=REGION_NAME)
-    sqs_client = boto3.client("sqs", endpoint_url=LOCALSTACK_URL, region_name=REGION_NAME)
-
-    # Put an item in the DDB table
-    ddb_client.put_item(
-        TableName="test-table",
-        Item={"productId": {"S": "123"}}
+    # Set up mock DynamoDB
+    table = dynamodb.create_table(
+        TableName='test-table',
+        KeySchema=[
+            {'AttributeName': 'productId', 'KeyType': 'HASH'}
+        ],
+        AttributeDefinitions=[
+            {'AttributeName': 'productId', 'AttributeType': 'S'}
+        ],
+        ProvisionedThroughput={
+            'ReadCapacityUnits': 5,
+            'WriteCapacityUnits': 5
+        }
     )
+    table.put_item(Item={'productId': '123'})
 
-    # Upload a JSON order file to S3
-    order_data = {"items": [{"productId": "123"}]}
-    s3_client.put_object(
-        Bucket="my-test-bucket1",
-        Key="orders/order123.json",
-        Body=json.dumps(order_data),
-    )
+    # Set up mock SQS
+    sqs.create_queue(QueueName='test-queue')
 
-    # Create a test S3 event
+    # Define the event
     event = {
-        "Records": [
-            {
-                "s3": {
-                    "bucket": {"name": "my-test-bucket1"},
-                    "object": {"key": "orders/order123.json"},
-                }
+        'Records': [{
+            's3': {
+                'bucket': {'name': bucket_name},
+                'object': {'key': object_key}
             }
-        ]
+        }]
     }
 
-    # Call your lambda handler
-    from lambdafunctions.order_verification.main import lambda_handler
+    # Call the lambda_handler
     lambda_handler(event, None)
 
-    # Check the queue for messages
-    queue_url = "http://localhost:4566/000000000000/test-queue"
-    msgs = sqs_client.receive_message(QueueUrl=queue_url, MaxNumberOfMessages=10)
-    messages = msgs.get("Messages", [])
-    assert len(messages) == 1, "Expected exactly one SQS message"
-    body = json.loads(messages[0]["Body"])
-    assert body == order_data, "Message body should match the uploaded order data"
+    # Verify SQS message
+    response = sqs.receive_message(QueueUrl='https://sqs.eu-central-1.amazonaws.com/123456789012/test-queue')
+    messages = response.get('Messages', [])
+    assert len(messages) == 1
+    message_body = json.loads(messages[0]['Body'])
+    assert message_body == order_data
