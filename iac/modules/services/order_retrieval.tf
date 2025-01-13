@@ -122,6 +122,11 @@ resource "aws_api_gateway_deployment" "order_api_deployment" {
   lifecycle {
     create_before_destroy = true
   }
+
+  depends_on = [
+    aws_api_gateway_method.process_method,
+    aws_api_gateway_integration.process_integration
+  ]
 }
 
 resource "aws_api_gateway_usage_plan" "order_api_usage_plan" {
