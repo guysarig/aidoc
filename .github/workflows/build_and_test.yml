@@ -45,7 +45,7 @@ jobs:
             if [ -n "$CHANGED_FILES" ]; then
               echo "Python code has changed, packaging Lambda payload."
               source helper_scripts/setup_venv.sh
-              # sh helper_scripts/run_code_test.sh source/lambdafunctions order_verification
+              sh helper_scripts/run_code_test.sh source/lambdafunctions order_verification
               sh create_tf_backend_destinations.sh
               echo "Lambda payloads built successfully."
             else
