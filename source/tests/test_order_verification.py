@@ -43,7 +43,7 @@ def test_lambda_handler(s3, dynamodb, sqs):
     )
     order_data = {
         "items": [
-            {"productId": "123"}, 
+            {"productId": "123"},
             {"productId": "456"}
         ]
     }

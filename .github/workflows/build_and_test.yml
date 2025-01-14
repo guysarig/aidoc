@@ -33,7 +33,9 @@ jobs:
           aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
           aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
           aws configure set region $AWS_REGION
+
       - name: Check for Python changes
+        id: check_python_changes
         run: |
             set -e
             if git rev-parse HEAD~1 >/dev/null 2>&1; then
@@ -43,23 +45,33 @@ jobs:
             fi
             echo "Changed files: $CHANGED_FILES"
             if [ -n "$CHANGED_FILES" ]; then
-              echo "Python code has changed, packaging Lambda payload."
-              source helper_scripts/setup_venv.sh
-              sh helper_scripts/run_code_test.sh source/lambdafunctions order_verification
-              sh create_tf_backend_destinations.sh
-              echo "Lambda payloads built successfully."
+              echo "Python code has changed."
+              echo "::set-output name=python_changed::true"
             else
-              echo "No changes in Python code, skipping packaging."
+              echo "No changes in Python code."
+              echo "::set-output name=python_changed::false"
             fi
-          
+
+      - name: Run Python tests
+        if: steps.check_python_changes.outputs.python_changed == 'true'
+        id: run_python_tests
+        run: |
+          source helper_scripts/setup_venv.sh
+          sh helper_scripts/run_code_test.sh source/lambdafunctions order_verification
+
+      - name: Build Lambda payload
+        if: steps.check_python_changes.outputs.python_changed == 'true' && steps.run_python_tests.conclusion == 'success'
+        run: |
+          sh create_tf_backend_destinations.sh
+          echo "Lambda payloads built successfully."
+
       - name: Install Terraform
         run: |
             curl -LO https://releases.hashicorp.com/terraform/1.5.0/terraform_1.5.0_linux_amd64.zip
             unzip terraform_1.5.0_linux_amd64.zip
             sudo mv terraform /usr/local/bin/
             terraform -v
-  
-          
+
       - name: Plan infrastructure
         run: |
           cd iac
